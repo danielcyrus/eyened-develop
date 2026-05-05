@@ -1,0 +1,125 @@
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+from pydantic import BaseModel, ConfigDict, Field
+
+from eyened_orm.image_instance import ETDRSField, Laterality, Modality, ModalityType
+from eyened_orm.patient import SexEnum
+from eyened_orm.segmentation import DataRepresentation, Datatype
+
+
+class InstancePOST(BaseModel):
+    storage_backend_key: str = Field(
+        ..., description="Key of an existing StorageBackend used for this image"
+    )
+    sop_instance_uid: Optional[str] = None
+    modality: Optional[Modality] = None
+    dicom_modality: Optional[ModalityType] = None
+    etdrs_field: Optional[ETDRSField] = None
+    laterality: Optional[Laterality] = None
+    height: Optional[int] = Field(None, description="Rows_y")
+    width: Optional[int] = Field(None, description="Columns_x")
+    depth: Optional[int] = Field(None, description="NrOfFrames")
+    resolution_horizontal: Optional[float] = None
+    resolution_vertical: Optional[float] = None
+    resolution_axial: Optional[float] = None
+    old_path: Optional[str] = None
+    device_id: Optional[int] = None
+    device_serial_number: Optional[str] = None
+    device_description: Optional[str] = None
+    device_manufacturer: Optional[str] = None
+    device_model: Optional[str] = None
+
+    # New fields
+    scan_mode: Optional[str] = None
+    source_info_id: Optional[int] = None
+    anatomic_region: Optional[int] = None
+    acquisition_date_time: Optional[datetime] = None
+    angiography: Optional[str] = None
+    samples_per_pixel: Optional[int] = None
+    horizontal_field_of_view: Optional[float] = None
+    sop_class_uid: Optional[str] = None
+    photometric_interpretation: Optional[str] = None
+    pupil_dilated: Optional[str] = None
+    fda_identifier: Optional[str] = None
+
+
+class SegmentationImport(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    data: np.ndarray
+
+    # Segmentation properties (snake_case to match DTO style, will be mapped to PascalCase for ORM)
+    data_type: Optional[Datatype] = None
+    data_representation: Optional[DataRepresentation] = None
+    depth: Optional[int] = None
+    height: Optional[int] = None
+    width: Optional[int] = None
+    sparse_axis: Optional[int] = None
+    image_projection_matrix: Optional[List[List[float]]] = None
+    scan_indices: Optional[List[int]] = None
+    threshold: Optional[float] = None
+    reference_segmentation_id: Optional[int] = None
+
+    # Metadata fields
+    creator_name: Optional[str] = None
+    feature_name: Optional[str] = None
+
+
+class ImageImport(InstancePOST):
+    object_key: str
+    attributes: Dict[str, Any] = Field(default_factory=dict)
+    segmentations: List[SegmentationImport] = Field(default_factory=list)
+
+
+class SeriesImport(BaseModel):
+    series_id: Optional[str] = None
+    images: List[ImageImport] = Field(default_factory=list)
+
+    # Series properties
+    series_number: Optional[int] = None
+    series_instance_uid: Optional[str] = None
+
+
+class StudyImport(BaseModel):
+    study_date: Optional[date] = None
+    series: List[SeriesImport] = Field(default_factory=list)
+
+    # Study properties
+    description: Optional[str] = None
+
+
+class PatientImport(BaseModel):
+    project_name: str = Field(..., description="Name of the project")
+    patient_identifier: str = Field(
+        ..., description="Unique patient identifier within the project"
+    )
+    studies: List[StudyImport] = Field(default_factory=list)
+
+    # Patient properties
+    sex: Optional[SexEnum] = None
+    birth_date: Optional[date] = None
+
+
+class InstancePOSTFlat(InstancePOST):
+    # Flattened version of PatientImport -> StudyImport -> SeriesImport -> ImageImport
+    project_name: str = Field(..., description="Name of the project")
+    patient_identifier: Optional[str] = Field(None, description="Patient identifier")
+    sex: Optional[SexEnum] = None
+    birth_date: Optional[date] = None
+
+    study_date: Optional[date] = None
+    study_description: Optional[str] = None
+
+    series_id: Optional[str] = None
+    series_number: Optional[int] = None
+    series_instance_uid: Optional[str] = None
+
+    object_key: str = Field(..., description="Path to the image file")
+    storage_backend_key: str = Field(
+        ..., description="Key of an existing StorageBackend used for this image"
+    )
+    attributes: Dict[str, Any] = Field(
+        default_factory=dict, description="Optional key-value properties"
+    )

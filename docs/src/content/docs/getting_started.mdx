@@ -1,0 +1,126 @@
+---
+title: Getting Started
+description: Deploy the Eyened platform
+---
+
+The Eyened platform is a modern web platform for visualization and annotation of ophthalmic images with features like:
+
+- Loading of various image formats including DICOM.
+- Convenient system for browsing / filtering loaded studies and images.
+- Task system for managing grading tasks.
+- Drawing tools for 2D image segmentation of enface images and OCT B-scans
+- Images and annotations are rendered in the browser, making it very responsive and easy to set up.
+- Authentication system secures the viewer, images, thumbnails and annotations.
+- Image enhancements such as CLAHE can be applied on the fly.
+- Integrated tools for registration of enface images.
+- Automated ETDRS grid placement via AI-based bounds detection and landmark detection (fovea, optic disc) upon insertion of CFI images.
+
+## Quick Setup
+
+The easiest way to get started with the Eyened platform is by configuring and running Docker Compose. The platform will then be accessible from any machine within your network.
+
+With this setup you will be able to:
+- Run the client / viewer, initially on an empty database.
+- Import images and associated metadata via the [Import API](/eyened-platform/importing_data) or Python ORM.
+
+**Prerequisite:** Ensure Docker and Docker Compose are installed.
+
+1. Clone the repository:
+
+    ```bash
+    git clone https://github.com/Eyened/eyened-platform.git
+    ```
+
+2. Navigate to the docker directory:
+
+    ```bash
+    cd eyened-platform/docker
+    ```
+
+:::caution
+**This section is outdated.**  
+The instructions and environment variable list below may not reflect the latest setup or required variables. 
+:::
+
+3. Create a `.env` file with the following variables:
+
+    | Variable | Description |
+    | --- | --- |
+    | PORT | Port the app will be served on |
+    | ADMIN_USERNAME | Username for the default admin user |
+    | ADMIN_PASSWORD | Password for the default admin user |
+    | SECRET_KEY | Secret key for JWT token generation |
+    | IMAGES_BASEPATH | Local folder to serve images from (may be read-only) |
+    | SEGMENTATIONS_ZARR_STORE | Local path to store segmentations (zarr format) |
+    | THUMBNAILS_PATH | Local path to store generated thumbnails |
+    | DATABASE_PATH | Path to MySQL data files |
+    | DATABASE_PORT | Port to access the database from outside |
+    | DATABASE_ROOT_PASSWORD | Root password for MySQL |
+    | DATABASE_USER | Username for database access |
+    | DATABASE_PASSWORD | Password for database access |
+
+4. Create the necessary directories:
+
+    ```bash
+    mkdir -p $HOME/eyened-platform/{images,storage,database}
+    ```
+
+5. Start the platform:
+
+    ```bash
+    USERID=$(id -u) GROUPID=$(id -g) docker compose up -d
+    ```
+
+:::note
+**Running Multiple Instances:** If you want to run multiple instances of the platform on the same host:
+- Change the name in docker-compose.yaml to something unique for every project
+- Change the port of Adminer in docker-compose.yaml (or remove this service) to avoid conflicts
+- Assign different folders for storage for each instance
+- Assign different ports to expose MySQL
+:::
+
+## Accessing the Platform
+
+Once the platform is running:
+
+1. The viewer will be available at `http://<HOSTNAME>:<PORT>` from within your network
+2. Adminer (database management) will be available at `http://<HOSTNAME>:8080`
+
+To manage the platform:
+
+- To view logs: `docker compose logs -f`
+- To stop the platform: `docker compose down`
+- To start the platform: `USERID=$(id -u) GROUPID=$(id -g) docker compose up -d`
+
+:::caution
+Make sure to set up regular back ups for both the MySQL database and storage folders.
+:::
+
+:::tip
+**Using the eyened_orm Python package**
+
+Install the ORM for database access and batch imports:
+
+```bash
+cd orm
+pip install -e .
+```
+
+Create an environment file with database credentials. The ORM expects variables with the `EYENED_DATABASE_` prefix (e.g. `EYENED_DATABASE_USER`, `EYENED_DATABASE_PASSWORD`, `EYENED_DATABASE_HOST`, etc.). Load it and connect:
+
+```python
+from dotenv import load_dotenv
+from eyened_orm import Database
+
+load_dotenv("path/to/your.env")  # or set vars in the environment
+database = Database()
+session = database.create_session()
+```
+
+See [ORM Configuration](/eyened-platform/orm/configuration) for full options.
+:::
+
+## Next Steps
+To import data into the platform, follow the [Importing Data guide](/eyened-platform/importing_data).
+
+For more details about the platform's architecture and services, see the [Platform Design](/eyened-platform/platform_design) documentation.

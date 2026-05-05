@@ -1,0 +1,14 @@
+fastapi==0.115.8
+uvicorn==0.33.0
+gunicorn==23.0.0
+numpy==2.0.0
+pandas>=1.5.3
+pydantic-settings==2.7.1
+zarr>=2.18.0
+python-multipart==0.0.20
+passlib==1.7.4
+pyjwt>=2.8.0
+rq>=2.7.0
+redis>=7.4.0
+cryptography>=44.0.2
+argon2-cffi>=25.1.0

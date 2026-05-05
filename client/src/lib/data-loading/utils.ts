@@ -1,0 +1,38 @@
+import type { ImageGET } from '../../types/openapi_types';
+
+export class DefaultDict<T, Q> extends Map<T, Q> {
+    defaultFactory: () => Q;
+    constructor(defaultFactory: () => Q) {
+        super();
+        this.defaultFactory = defaultFactory;
+    }
+    get(name: T): Q {
+        if (this.has(name)) {
+            return super.get(name)!;
+        } else {
+            const value = this.defaultFactory();
+            this.set(name, value);
+            return value;
+        }
+    }
+}
+
+export function parseDate(dateString: string): Date | undefined {
+    try {
+        const [year, month, day, hour, minute, second] = dateString.split(/[- :]/).map(Number);
+        return new Date(year, month - 1, day, hour, minute, second);
+    } catch (error) {
+    }
+}
+
+export function getThumbUrl(image: ImageGET, size: number = 144) {
+    return `/api/images/${image.id}/thumbnail?size=${size}`;
+}
+
+export function arraysEqual(a: any[], b: any[]): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}

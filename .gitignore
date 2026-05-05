@@ -1,0 +1,32 @@
+# Environments and Secrets
+**/*.env
+**/env.txt
+orm/migrations/transfer-config*.yml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+
+# Node / Frontend
+node_modules/
+client/package-lock.json
+client/src/lib/extensions.ts
+dist/
+
+# Data and Storage
+storage/**/*
+images/**/*
+segmentations.zarr/
+db_data/
+
+# IDE and Misc
+*.zip
+notebooks/hrfav/**/*
+dev/docker-compose.yml
+cookies.txt
+.vscode/
+**/.DS_Store
+**/.ipynb_checkpoints/**
+.cursor/

@@ -1,0 +1,6 @@
+**/.ipynb_checkpoints/**
+**/.vscode/** 
+**.egg-info
+**/*.pyc
+**/*.my.ipynb
+.cursor/

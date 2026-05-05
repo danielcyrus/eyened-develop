@@ -1,0 +1,138 @@
+---
+title: Command line utilities
+description: Learn how to use the command line utilities available in the ORM
+sidebar:
+  order: 3
+---
+
+{/* Claude query: In cli.mdx, document the command line utilities in cli.py. Include a section for each utility and explain what they do. ie. that full will create a full copy of the production database for development reasons and update thumbnails will update all thumbnails in the database. Do not include the specific options for each command as these might change, but do indicate that they can be checked with --help */}
+
+# Eyened ORM CLI
+
+The Eyened ORM includes command line utilities for database setup, maintenance, model inference, and validation. Commands are available through the `eorm` CLI.
+
+:::note
+Use the global help to list all commands:
+
+```bash
+eorm --help
+```
+
+Use command help to inspect current options:
+
+```bash
+eorm [COMMAND] --help
+```
+:::
+
+## Available Commands
+
+### create-database
+
+Creates the database and tables if they do not already exist.
+
+```bash
+eorm create-database [OPTIONS]
+```
+
+### create-user
+
+Creates a database user with login credentials and metadata.
+
+```bash
+eorm create-user [OPTIONS]
+```
+
+### update-thumbnails
+
+Updates thumbnails for images in the database. Use this after thumbnail-generation logic changes or to fill in missing thumbnails.
+
+```bash
+eorm update-thumbnails [OPTIONS]
+```
+
+### run-models
+
+Runs attribute inference models on a provided set of image IDs.
+
+```bash
+eorm run-models [OPTIONS]
+```
+
+### run-segmentation
+
+Runs segmentation inference models on a provided set of image IDs.
+
+```bash
+eorm run-segmentation [OPTIONS]
+```
+
+### run-etdrs-model
+
+Runs ETDRS summary processing using model segmentations and related model outputs.
+
+```bash
+eorm run-etdrs-model [OPTIONS]
+```
+
+### run-registration
+
+Runs registration processing for images, scoped by patient or project as needed.
+
+```bash
+eorm run-registration [OPTIONS]
+```
+
+### validate-forms
+
+Validates form annotations and schemas stored in the database.
+
+```bash
+eorm validate-forms [OPTIONS]
+```
+
+### zarr-tree
+
+Prints the structure of the configured zarr store, including groups and arrays.
+
+```bash
+eorm zarr-tree [OPTIONS]
+```
+
+### defragment-zarr
+
+Copies segmentations to a new zarr store with sequential indices to reduce fragmentation.
+
+```bash
+eorm defragment-zarr [OPTIONS]
+```
+
+### update-hashes
+
+Updates missing `FileChecksum` and `DataHash` values for image instances.
+
+```bash
+eorm update-hashes [OPTIONS]
+```
+
+### load-dump
+
+Loads a SQL dump into the target database after dropping and recreating it.
+
+```bash
+eorm load-dump [OPTIONS]
+```
+
+:::caution
+`load-dump` is destructive and replaces all existing data in the configured database.
+:::
+
+### save-dump
+
+Creates a dated SQL dump of the configured database.
+
+```bash
+eorm save-dump [OPTIONS]
+```
+
+

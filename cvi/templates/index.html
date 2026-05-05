@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Entry & Verification</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .container { display: flex; flex: 1; overflow: hidden; background: #2c3e50; }
+        .left-panel { width: 450px; padding: 25px; overflow-y: auto; background: #ffffff; box-shadow: 5px 0 15px rgba(0,0,0,0.2); z-index: 10; }
+        .right-panel { flex-grow: 1; display: flex; background: #525659; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .section-header { font-size: 14px; font-weight: bold; color: #007bff; border-bottom: 2px solid #007bff; margin: 25px 0 15px; padding-bottom: 5px; text-transform: uppercase; }
+        .field { margin-bottom: 15px; }
+        label { display: block; font-size: 11px; color: #7f8c8d; margin-bottom: 4px; font-weight: 600; }
+        input { width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 4px; box-sizing: border-box; font-size: 13px; transition: border 0.2s; }
+        input:focus { border-color: #3498db; outline: none; background: #f7f9fb; }
+        
+        /* Updated btn-group for 3 buttons */
+        .btn-group { position: sticky; bottom: -25px; background: white; padding: 20px 0; border-top: 1px solid #ecf0f1; display: flex; gap: 8px; margin-top: 30px; }
+        .btn { flex: 1; padding: 12px 5px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; font-size: 13px; }
+        
+        .btn-save { background: #27ae60; color: white; }
+        .btn-save:hover { background: #2ecc71; }
+        .btn-next { background: #95a5a6; color: white; }
+        .btn-next:hover { background: #7f8c8d; }
+        .btn-back { background: #e67e22; color: white; }
+        .btn-back:hover { background: #d35400; }
+        .btn-disabled { background: #ecf0f1; color: #bdc3c7; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="left-panel">
+        <form action="/save" method="post">
+            <input type="hidden" name="index" value="{{ index }}">
+            
+            <div class="section-header">Patient Details</div>
+            {% for key, value in data.items() %}
+                {% if key != "Boolean Questions" %}
+                <div class="field">
+                    <label>{{ key }}</label>
+                    <input type="text" name="{{ key }}" value="{{ value }}">
+                </div>
+                {% endif %}
+            {% endfor %}
+
+            <div class="section-header">Questions & Assessment</div>
+            {# Defensive check for the Boolean Questions key #}
+            {% if data['Boolean Questions'] %}
+                {% for key, value in data['Boolean Questions'].items() %}
+                <div class="field">
+                    <label>{{ key }}</label>
+                    <input type="text" name="{{ key }}" value="{{ value }}">
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="btn-group">
+                {% if index > 0 %}
+                    <a href="/?index={{ index - 1 }}" class="btn btn-back">Back</a>
+                {% else %}
+                    <span class="btn btn-disabled">Back</span>
+                {% endif %}
+
+                <button type="submit" class="btn btn-save">Save & Next</button>
+                
+                <a href="/?index={{ index + 1 }}" class="btn btn-next">Skip</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="right-panel">
+        <iframe src="/pdfs/{{ pdf_file }}"></iframe>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,186 @@
+import { type ClassValue, clsx } from "clsx";
+import { cubicOut } from "svelte/easing";
+import type { TransitionConfig } from "svelte/transition";
+import { twMerge } from "tailwind-merge";
+
+import { readable, type Readable, type Unsubscriber } from 'svelte/store';
+
+export function groupBy(xs: { [key: string | number]: any }[], key: string | number) {
+    return xs.reduce(function (rv, x) {
+        (rv[x[key]] = rv[x[key]] || []).push(x);
+        return rv;
+    }, {});
+}
+export function groupByFunction<K, V>(xs: V[], key: (arg0: V) => K): Map<K, V[]> {
+    return xs.reduce(function (map, x) {
+        const k = key(x);
+        if (map.has(k)) {
+            map.get(k).push(x);
+        } else {
+            map.set(k, [x]);
+        }
+        return map;
+    }, new Map());
+}
+
+export class DefaultDictList<K, V> extends Map<K, V[]> {
+    get(key: K): V[] {
+        if (!this.has(key)) {
+            this.set(key, []);
+        }
+        return super.get(key)!;
+    }
+}
+
+export function splitTail(str: string, sep: string) {
+    const index = str.lastIndexOf(sep);
+    return [str.substring(0, index), str.substring(index + 1)];
+}
+
+
+
+export type Color = [number, number, number];
+
+export function toHex(color: Color) {
+    const [r, g, b] = color;
+    return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
+
+export function fromHex(hex: string): [number, number, number] {
+    const bigint = parseInt(hex.slice(1), 16);
+    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+}
+
+
+export function get_url_params() {
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    return Object.fromEntries(urlSearchParams.entries());
+}
+
+export class Deferred<T> {
+    promise: Promise<T>;
+    resolve!: (value: T | PromiseLike<T>) => void;
+    reject!: (reason?: any) => void;
+
+    constructor() {
+        this.promise = new Promise<T>((res, rej) => {
+            this.resolve = res;
+            this.reject = rej;
+        });
+    }
+}
+
+
+export function asyncReadable<T>(
+    promise: Promise<Readable<T>>,
+    initialValue: T
+): Readable<T> {
+    return readable<T>(initialValue, (set) => {
+        let unsub: Unsubscriber | undefined;
+
+        promise.then(store => {
+            unsub = store.subscribe(set);
+        });
+
+        return () => {
+            unsub?.();
+        };
+    });
+}
+export function toggleInSet<T>(set: { has: (item: T) => boolean, delete: (item: T) => void, add: (item: T) => void }, item: T) {
+    if (set.has(item)) {
+        set.delete(item);
+    } else {
+        set.add(item);
+    }
+}
+
+
+export function cn(...inputs: ClassValue[]) {
+	return twMerge(clsx(inputs));
+}
+
+type FlyAndScaleParams = {
+	y?: number;
+	x?: number;
+	start?: number;
+	duration?: number;
+};
+
+export const flyAndScale = (
+	node: Element,
+	params: FlyAndScaleParams = { y: -8, x: 0, start: 0.95, duration: 150 }
+): TransitionConfig => {
+	const style = getComputedStyle(node);
+	const transform = style.transform === "none" ? "" : style.transform;
+
+	const scaleConversion = (
+		valueA: number,
+		scaleA: [number, number],
+		scaleB: [number, number]
+	) => {
+		const [minA, maxA] = scaleA;
+		const [minB, maxB] = scaleB;
+
+		const percentage = (valueA - minA) / (maxA - minA);
+		const valueB = percentage * (maxB - minB) + minB;
+
+		return valueB;
+	};
+
+	const styleToString = (
+		style: Record<string, number | string | undefined>
+	): string => {
+		return Object.keys(style).reduce((str, key) => {
+			if (style[key] === undefined) return str;
+			return str + `${key}:${style[key]};`;
+		}, "");
+	};
+
+	return {
+		duration: params.duration ?? 200,
+		delay: 0,
+		css: (t) => {
+			const y = scaleConversion(t, [0, 1], [params.y ?? 5, 0]);
+			const x = scaleConversion(t, [0, 1], [params.x ?? 0, 0]);
+			const scale = scaleConversion(t, [0, 1], [params.start ?? 0.95, 1]);
+
+			return styleToString({
+				transform: `${transform} translate3d(${x}px, ${y}px, 0) scale(${scale})`,
+				opacity: t
+			});
+		},
+		easing: cubicOut
+	};
+};
+
+export function timeAgo(date: Date): string {
+    const now = new Date();
+    const seconds = Math.floor((+now - +date) / 1000);
+    if (seconds < 60) {
+        return "a few seconds ago";
+    }
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) {
+        return minutes === 1 ? "a minute ago" : `${minutes} minutes ago`;
+    }
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+        return hours === 1 ? "an hour ago" : `${hours} hours ago`;
+    }
+    const days = Math.floor(hours / 24);
+    if (days === 1) {
+        return "yesterday";
+    } else if (days < 7) {
+        return `${days} days ago`;
+    }
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) {
+        return weeks === 1 ? "a week ago" : `${weeks} weeks ago`;
+    }
+    return date.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    });
+}

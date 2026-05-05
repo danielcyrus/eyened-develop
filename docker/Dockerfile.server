@@ -1,0 +1,46 @@
+# Build stage
+FROM python:3.12-slim as builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency files
+COPY server/requirements.txt .
+COPY orm /build/orm
+
+# Install dependencies
+RUN pip install --user --no-cache-dir -r requirements.txt
+RUN cd /build/orm && pip install --user --no-cache-dir -e .
+
+# Runtime stage
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxcb1 libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /root/.local /root/.local
+
+# Copy application code
+COPY orm /app/orm
+COPY server /app/server
+
+ENV PATH=/root/.local/bin:$PATH
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=10s --timeout=3s --retries=5 --start-period=20s \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()" || exit 1
+
+CMD ["gunicorn", "server.main:app", \
+     "--workers", "4", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--bind", "0.0.0.0:8000", \
+     "--log-level", "info"]

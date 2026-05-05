@@ -1,0 +1,56 @@
+<script lang="ts">
+    import { page } from "$app/state";
+    import { Toaster } from "$lib/components/ui/sonner";
+    import { GlobalContext } from "$lib/data/globalContext.svelte";
+    import Dialogue from "$lib/Dialogue.svelte";
+    import Popup from "$lib/Popup.svelte";
+    import { setContext } from "svelte";
+    import '../app.css';
+    
+    let { children }: { children: any } = $props();
+    
+    function closePopup() {
+        globalContext.popupComponent = null;
+    }
+    
+    function closeDialogue() {
+        globalContext.dialogue = null;
+    }
+    
+    const globalContext = new GlobalContext();
+    
+    setContext("globalContext", globalContext);
+    
+    
+    const init = globalContext.init(page.url.pathname)
+</script>
+
+{#if globalContext.popupComponent}
+    <Popup componentDef={globalContext.popupComponent} close={closePopup} />
+{/if}
+{#if globalContext.dialogue}
+    <Dialogue content={globalContext.dialogue} close={closeDialogue} />
+{/if}
+
+{#await init then _}
+    {@render children()}
+{/await}
+<Toaster />
+
+<style>
+    :global(body) {
+        margin: 0;
+        height: 100vh;
+        font-family: Verdana, sans-serif;
+        font-size: small;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    :root {
+        --browser-background: #f4f4f8;
+        --browser-color: #000010;
+        --browser-border: #e3e3e3;
+        --icon-hover: rgba(110, 164, 189, 0.43);
+    }
+</style>

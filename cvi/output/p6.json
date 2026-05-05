@@ -1,0 +1,29 @@
+{
+    "name": "MAUREEN SANDEFORD",
+    "Date of Birth": "15/10/1944",
+    "Gender": "Female",
+    "NHS Number": "4100191510",
+    "Patient Postcode": "BR8 7QT",
+    "Patient Town": "Claremont Rd",
+    "Visual Status": "Blind",
+    "Form Version": "Updated September 2018",
+    "Registration Date": "1/10/2025",
+    "Patient Date": "1/10/2025",
+    "Signatory Is": "Representative",
+    "Boolean Questions": {
+        "Live alone?": "No",
+        "Support with care?": "Yes",
+        "Poor mobility?": "No",
+        "Hearing impairment?": "Yes",
+        "Learning disability?": "No",
+        "Dementia?": "No",
+        "Specialist education service?": "No"
+    },
+    "Employment status": "Unrecorded",
+    "Ethnicity": "White_British",
+    "Diagnosis Source": "Kings College Hospital, Orpington Hospital",
+    "Right Eye Diagnosis": "Age-related macular degeneration | 362.50 | H35.3",
+    "Left Eye Diagnosis": "Age-related macular degeneration | 362.50 | H35.3",
+    "Main Diagnosis": "Age-related macular degeneration | 362.50 | H35.3",
+    "hospital_name": "AIREDALE NHS FOUNDATION TRUST | AIREDALE GENERAL HOSPITAL | BD20 6TD"
+}

@@ -1,0 +1,112 @@
+---
+title: Eyened ORM configuration
+description: Learn how to configure the Eyened ORM for database and API access
+sidebar:
+  order: 2
+---
+
+## Configuration Options
+
+The Eyened ORM is configured through environment variables.
+The following sections describe all available configuration options:
+
+### Database Settings
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| EYENED_DATABASE_USER | Yes | - | Database username |
+| EYENED_DATABASE_PASSWORD | Yes | - | Database password |
+| EYENED_DATABASE_HOST | No | `database` | Database host address |
+| EYENED_DATABASE_DATABASE | No | `eyened_database` | Database name |
+| EYENED_DATABASE_PORT | No | `3306` | Database port number |
+| EYENED_DATABASE_RAISE_ON_WARNINGS | No | `true` | Whether to raise exceptions on database warnings |
+
+### API Client Settings
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| EYENED_API_URL | Yes | - | Base URL of the Eyened API |
+| EYENED_API_USERNAME | Yes | - | API login username |
+| EYENED_API_PASSWORD | Yes | - | API login password |
+
+## Creating Environment Files
+
+The most common way to configure the ORM is through `.env` files. Create an environment file (for example `.env.dev`) with the following structure:
+
+```bash
+# Database Settings
+EYENED_DATABASE_USER=myuser
+EYENED_DATABASE_PASSWORD=mypassword
+EYENED_DATABASE_HOST=localhost
+EYENED_DATABASE_DATABASE=eyened_database
+EYENED_DATABASE_PORT=3306
+EYENED_DATABASE_RAISE_ON_WARNINGS=true
+
+# API Client Settings (only needed if using APIClient)
+EYENED_API_URL=http://localhost:3000
+EYENED_API_USERNAME=myuser
+EYENED_API_PASSWORD=mypassword
+```
+
+You can maintain multiple environment files for different environments (for example `.env.dev`, `.env.prod`, `.env.test`).
+
+## Initialization Methods
+
+The `Database` class can be initialized in several ways:
+
+### 1. From Environment Variables
+
+Load env vars (for example with `python-dotenv`), then initialize `Database()`:
+
+```python
+from eyened_orm import Database
+from dotenv import load_dotenv
+
+# Load environment variables from a .env file
+load_dotenv("/home/bart/.env.dev")
+
+# Reads settings from os.environ
+database = Database()
+```
+
+### 2. From a Settings Object
+
+Pass a `DatabaseSettings` instance directly:
+
+```python
+from eyened_orm import Database
+from eyened_orm.config import DatabaseSettings
+
+settings = DatabaseSettings(
+    host="eyened-supergpu",
+    port=16306,
+    user="root",
+    password="test",
+)
+
+database = Database(settings)
+```
+
+## Usage
+
+Once initialized, you can use the database connection:
+
+```python
+from eyened_orm import Database
+
+# Initialize database
+database = Database()
+
+# Context managed session (recommended - automatically closed)
+with database.get_session() as session:
+    # Use session for database operations
+    pass
+
+# Manual session management (must be closed manually)
+session = database.create_session()
+try:
+    # Use session for database operations
+    pass
+finally:
+    session.close()
+```

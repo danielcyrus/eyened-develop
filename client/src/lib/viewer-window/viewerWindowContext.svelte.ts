@@ -1,0 +1,212 @@
+import { ImageLoader, type LoadedImages } from "$lib/data-loading/imageLoader";
+import { fetchInstance, fetchFormAnnotations, fetchPatient } from "$lib/data/api";
+import { instances } from "$lib/data/stores.svelte";
+import { loadPhotoLocators, type PhotoLocator } from "$lib/registration/photoLocators";
+import type { Registration } from "$lib/registration/registration";
+import { ViewerContext } from "$lib/viewer/viewerContext.svelte";
+import { AbstractImage } from "$lib/webgl/abstractImage";
+import type { WebGL } from "$lib/webgl/webgl";
+import { SvelteMap } from "svelte/reactivity";
+import type { ImageGET } from "../../types/openapi_types";
+import MainViewer from './MainViewer.svelte';
+
+export type MainPanelType = {
+    component: any;
+    props: any;
+}
+
+export class ViewerWindowContext {
+
+    private imagesIndex = new Map<string, Promise<LoadedImages>>();
+    private bySOPInstanceUID = new Map<string, LoadedImages>();
+
+    private viewers = new Set<ViewerContext>();
+
+    public instanceIds: string[] = $state([]);
+
+    public mainPanels: MainPanelType[] = $state([]);
+
+    public readonly imageLoader: ImageLoader;
+    public readonly topViewers = new SvelteMap<AbstractImage, ViewerContext>();
+
+    photoLocators = new SvelteMap<string, PhotoLocator[]>();
+    photoLocatorSets: PhotoLocator[][] = $state([]);
+
+    private frame: number = 0;
+    private loadedPatientIds = new Set<number>();
+
+    constructor(
+        public readonly webgl: WebGL,
+        public readonly registration: Registration,
+        public readonly creator: unknown,
+        instanceIDs: string[] = [],
+    ) {
+        this.imageLoader = new ImageLoader(webgl);
+
+        // start rendering loop
+        const loop = () => {
+            this.frame = requestAnimationFrame(loop);
+            this.repaint();
+        }
+        loop();
+
+        this.setInstanceIDs(instanceIDs);
+    }
+
+    addViewer(viewer: ViewerContext) {
+        this.viewers.add(viewer);
+        return () => this.viewers.delete(viewer);
+    }
+
+    removeViewer(viewer: ViewerContext) {
+        this.viewers.delete(viewer);
+    }
+
+    repaint() {
+        this.webgl.clear({ left: 0, bottom: 0, width: this.webgl.canvas.width, height: this.webgl.canvas.height });
+        this.viewers.forEach((viewer) => viewer.repaint());
+    }
+
+    async setInstanceIDs(ids: string[]) {
+        // ensure metadata of all instances is loaded
+        const missingIds = ids.filter((id) => !instances.get(id));
+        if (missingIds.length) {
+            await Promise.all(missingIds.map((id) => fetchInstance(id, {
+                with_segmentations: true,
+                with_form_annotations: true,
+                with_model_segmentations: true
+            })));
+            // Data is automatically ingested into global stores by fetchInstance
+        }
+
+        this.instanceIds = ids;
+        
+        // Fetch all form annotations for the involved patient(s)
+        const patientIds = Array.from(new Set(
+            ids
+                .map((id) => instances.get(id)?.patient?.id)
+                .filter((pid): pid is number => typeof pid === 'number')
+        ));
+        if (patientIds.length) {
+            await Promise.all(
+                patientIds
+                    .filter((pid) => !this.loadedPatientIds.has(pid))
+                    .map(async (pid) => {
+                        await fetchFormAnnotations({ patient_id: pid });
+                        await fetchPatient(pid, {
+                            include_attributes: true,
+                        });
+                        this.loadedPatientIds.add(pid);
+                    })
+            );
+        }
+
+        // Load images for all instances
+        for (const id of ids) {
+            const instance = instances.get(id);
+            if (instance) {
+                this.loadImage(instance);
+            } else {
+                console.warn(`Instance with id ${id} not found after fetch`);
+            }
+        }
+    }
+
+    destroy() {
+        // Cancel animation frame
+        cancelAnimationFrame(this.frame);
+
+        // Dispose all images and their resources
+        for (const [image, viewer] of this.topViewers.entries()) {
+            try {
+                image.dispose();
+            } catch (error) {
+                console.error(`Error disposing image ${image.image_id}:`, error);
+            }
+        }
+
+        // Clear all maps and sets
+        this.topViewers.clear();
+        this.viewers.clear();
+        this.imagesIndex.clear();
+        this.bySOPInstanceUID.clear();
+        this.photoLocators.clear();
+        this.photoLocatorSets = [];
+        this.mainPanels = [];
+        this.instanceIds = [];
+    }
+
+    async loadImage(instance: ImageGET): Promise<LoadedImages> {
+        // Start loading if not already in progress
+        if (!this.imagesIndex.has(instance.id)) {
+            const loadPromise = this.imageLoader.load(instance).then(loadedImages => {
+
+                // Process images once loaded
+                for (const image of loadedImages) {
+                    this.importPhotoLocators(image);
+                }
+
+                // Set up indices
+                this.bySOPInstanceUID.set(instance.sop_instance_uid, loadedImages);
+
+                // Create viewer contexts
+                for (const image of loadedImages) {
+                    this.topViewers.set(image, new ViewerContext(image, this));
+                }
+
+                return loadedImages;
+            });
+
+            this.imagesIndex.set(instance.id, loadPromise);
+        }
+
+        // Return cached promise (either existing or newly created)
+        return this.imagesIndex.get(instance.id)!;
+    }
+    importPhotoLocators(image: AbstractImage) {
+        const photoLocators = loadPhotoLocators(image);
+        this.photoLocatorSets.push(photoLocators);
+
+        for (const locator of photoLocators) {
+            for (const key of ['enfaceImageId', 'octImageId']) {
+                const image_id = String(locator[key as keyof PhotoLocator]);
+                if (!this.photoLocators.has(image_id)) {
+                    this.photoLocators.set(image_id, []);
+                }
+                this.photoLocators.get(image_id)!.push(locator);
+            }
+        }
+        const locators = this.photoLocators.get(image.image_id) ?? [];
+        this.registration.addImage(image, locators);
+    }
+
+
+    addImagePanel(image: AbstractImage) {
+        this.mainPanels.push({ component: MainViewer, props: { image } });
+    }
+
+    setImagePanel(image: AbstractImage) {
+        this.mainPanels = [{ component: MainViewer, props: { image } }];
+    }
+
+    setPanel(panel: MainPanelType) {
+        this.mainPanels = [panel];
+    }
+
+    addPanel(panel: MainPanelType) {
+        this.mainPanels.push(panel);
+    }
+
+    removePanel(panel: MainPanelType) {
+        this.mainPanels = this.mainPanels.filter((item) => item !== panel);
+    }
+
+    getImages(instanceID: string): Promise<LoadedImages> {
+        const instance = instances.get(instanceID);
+        if (instance === undefined) {
+            throw new Error(`Instance with id ${instanceID} not found`);
+        }
+        return this.loadImage(instance);
+    }
+
+}
